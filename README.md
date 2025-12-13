@@ -1,5 +1,9 @@
 # Trajectory-Based Urban Community Detection Project
 
+> This project is still in progress
+> 
+> The current version is only a sketch
+
 ## Project Goal
 
 Use aircraft trajectory data around Chengdu to detect spatial communities of flight trajectories, analyze patterns, and visualize them on maps.
