@@ -27,3 +27,6 @@ routes <- routes %>%
   )
 
 st_write(routes, "flight_routes.geojson", driver = "GeoJSON", append = FALSE)
+
+
+
