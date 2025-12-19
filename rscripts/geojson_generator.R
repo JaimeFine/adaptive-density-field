@@ -1,5 +1,6 @@
 library(dplyr)
-library(sf)
+library(jsonlite)
+library(purrr)
 library(readr)
 library(tools)
 
@@ -53,7 +54,14 @@ for (file in files) {
         vx = track_speed * sin(track_heading * pi / 180),
         vy = track_speed * cos(track_heading * pi / 180),
         vz = track_vertical_speed
+      ) %>% ungroup()
+    
+    state_list <- lapply(1:nrow(geojson), function(i) {
+      list(
+        pos = c(geojson$track_longitude[i], geojson$track_latitude[i], geojson$track_altitude[i]),
+        vel = c(geojson$vx[i], geojson$vy[i], geojson$vz[i])
       )
+    })
     
     geojson <- geojson %>%
       mutate(
@@ -74,47 +82,31 @@ for (file in files) {
       )
     
     # Creating .geojson file:
-    # Create GeoJSON structure manually:
-    geojson_list <- list(
-      type = "FeatureCollection",
-      features = purrr::pmap(
-        list(
-          track_longitude = geojson$track_longitude,
-          track_latitude = geojson$track_latitude,
-          track_altitude = geojson$track_altitude,
-          state = geojson$state,
-          track_timestamp = geojson$track_timestamp,
-          dt = geojson$dt,
-          identification_number = geojson$identification_number,
-          Airline = geojson$Airline,
-          airport_origin_icao = geojson$airport_origin_icao
+    features <- vector("list", nrow(geojson))
+    for (i in seq_len(nrow(geojson))) {
+      features[[i]] <- list(
+        type = "Feature",
+        geometry = list(
+          type = "Point",
+          coordinates = c(geojson$track_longitude[i], geojson$track_latitude[i], geojson$track_altitude[i])
         ),
-        function(track_longitude, track_latitude, track_altitude, state, track_timestamp, dt, identification_number, Airline, airport_origin_icao) {
-          list(
-            type = "Feature",
-            geometry = list(
-              type = "Point",
-              coordinates = c(track_longitude, track_latitude, track_altitude)
-            ),
-            properties = list(
-              state = state,
-              timestamp = as.character(track_timestamp),
-              dt = dt,
-              flight_id = identification_number,
-              Airline = Airline,
-              airport_origin_icao = airport_origin_icao
-            )
-          )
-        }
+        properties = list(
+          state = state_list[[i]],
+          timestamp = as.character(geojson$track_timestamp[i]),
+          dt = geojson$dt[i],
+          flight_id = geojson$identification_number[i],
+          Airline = geojson$Airline[i],
+          airport_origin_icao = geojson$airport_origin_icao[i]
+        )
       )
-    )
+    }
     
-    # Write the file:
-    out_file <- file.path(
-      folder, paste0(file_path_sans_ext(basename(file)), "_processed.geojson")
-    )
+    geojson_out <- list(type = "FeatureCollection", features = features)
     
-    jsonlite::write_json(geojson_list, out_file, auto_unbox = TRUE, pretty = TRUE)
+    out_file <- file.path(folder, paste0(file_path_sans_ext(basename(file)), "_processed.geojson"))
+    
+    jsonlite::write_json(geojson_out, out_file, auto_unbox = TRUE)
+    
     print("Written")
     
   }, error = function(e) {
