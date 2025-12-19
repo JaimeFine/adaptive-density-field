@@ -1,116 +1,79 @@
 library(dplyr)
-library(jsonlite)
-library(purrr)
+library(sf)
 library(readr)
 library(tools)
 
 TIMESTAMP_FORMAT <- "%Y-%m-%d %H:%M:%S"
 
 folder <- "C:/Users/13647/OneDrive/Desktop"
-files <- list.files(folder, pattern = "\\.csv$", full.names=TRUE)
+files <- list.files(folder, pattern = "\\.csv$", full.names = TRUE)
 
 for (file in files) {
   
   message("Processing: ", file)
-
+  
   tryCatch({
-    # Basic processing:
-    geojson <- read_csv(
-      file,
-      col_types = cols(
-        track_timestamp = col_datetime(format = "%Y.%m.%d, %H:%M:%S"),
-        track_longitude = col_double(),
-        track_latitude = col_double(),
-        track_altitude = col_double(),
-        track_speed = col_double(),
-        track_heading = col_double(),
-        track_vertical_speed = col_double(),
-        identification_number = col_character(),
-        Airline = col_character(),
-        airport_origin_icao = col_character()
-      )
-    ) %>%
+    
+    df <- read_csv(file, show_col_types = FALSE) %>%
       filter(
         !is.na(track_longitude),
         !is.na(track_latitude),
         !is.na(track_altitude),
         !is.na(track_timestamp)
-      )
-    
-    # Adding new elements:
-    geojson <- geojson %>%
+      ) %>%
+      mutate(
+        track_timestamp = as.POSIXct(track_timestamp, format = TIMESTAMP_FORMAT),
+        track_longitude = as.numeric(track_longitude),
+        track_latitude  = as.numeric(track_latitude),
+        track_altitude  = as.numeric(track_altitude),
+        track_speed     = as.numeric(track_speed),
+        track_heading   = as.numeric(track_heading),
+        track_vertical_speed = as.numeric(track_vertical_speed)
+      ) %>%
       arrange(identification_number, track_timestamp) %>%
       group_by(identification_number) %>%
       mutate(
-        dt = as.numeric(
-          difftime(
-            lead(track_timestamp),
-            track_timestamp,
-            units = "secs"
-          )
-        )
-      ) %>%
-      mutate(
+        dt = as.numeric(difftime(
+          lead(track_timestamp),
+          track_timestamp,
+          units = "secs"
+        )),
         vx = track_speed * sin(track_heading * pi / 180),
         vy = track_speed * cos(track_heading * pi / 180),
         vz = track_vertical_speed
-      ) %>% ungroup()
-    
-    state_list <- lapply(1:nrow(geojson), function(i) {
-      list(
-        pos = c(geojson$track_longitude[i], geojson$track_latitude[i], geojson$track_altitude[i]),
-        vel = c(geojson$vx[i], geojson$vy[i], geojson$vz[i])
-      )
-    })
-    
-    geojson <- geojson %>%
+      ) %>%
+      ungroup() %>%
       mutate(
-        state = purrr::pmap(
-          list(
-            track_longitude,
-            track_latitude,
-            track_altitude,
-            vx, vy, vz
-          ),
-          function(lon, lat, alt, vx, vy, vz) {
-            list(
-              pos = c(lon, lat, alt),
-              vel = c(vx, vy, vz)
-            )
-          }
-        )
+        velocity = paste(vx, vy, vz, sep = " "),
+        timestamp = as.character(track_timestamp),
+        flight_id = identification_number
       )
     
-    # Creating .geojson file:
-    features <- vector("list", nrow(geojson))
-    for (i in seq_len(nrow(geojson))) {
-      features[[i]] <- list(
-        type = "Feature",
-        geometry = list(
-          type = "Point",
-          coordinates = c(geojson$track_longitude[i], geojson$track_latitude[i], geojson$track_altitude[i])
-        ),
-        properties = list(
-          state = state_list[[i]],
-          timestamp = as.character(geojson$track_timestamp[i]),
-          dt = geojson$dt[i],
-          flight_id = geojson$identification_number[i],
-          Airline = geojson$Airline[i],
-          airport_origin_icao = geojson$airport_origin_icao[i]
-        )
+    geojson_sf <- st_as_sf(
+      df,
+      coords = c("track_longitude", "track_latitude", "track_altitude"),
+      crs = 4326,
+      remove = TRUE
+    ) %>%
+      select(
+        geometry,
+        velocity,
+        timestamp,
+        dt,
+        flight_id,
+        Airline,
+        airport_origin_icao
       )
-    }
     
-    geojson_out <- list(type = "FeatureCollection", features = features)
+    out_file <- file.path(
+      folder,
+      paste0(file_path_sans_ext(basename(file)), "_processed.geojson")
+    )
     
-    out_file <- file.path(folder, paste0(file_path_sans_ext(basename(file)), "_processed.geojson"))
-    
-    jsonlite::write_json(geojson_out, out_file, auto_unbox = TRUE)
-    
-    print("Written")
+    st_write(geojson_sf, out_file, driver = "GeoJSON", append = FALSE)
+    message("Written: ", out_file)
     
   }, error = function(e) {
     message("Error in ", file, ": ", e$message)
   })
 }
-
