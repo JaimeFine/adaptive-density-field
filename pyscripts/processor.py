@@ -43,11 +43,6 @@ for f_id in flights:
 # ------------------ Block 2 ----------------- # 
 #            Computation heavy zone            #
 # -------------------------------------------- #
-"""
-from julia import Julia
-jl = Julia(compiled_modules=False)
-from julia import LinearAlgebra
-"""
 
 # Pure physics-based model ----- basic:
 physic_normal = {}
@@ -59,11 +54,11 @@ for f_id in flights:
     size = len(coords) - 1
     physic_normal[f_id] = np.zeros((size, 3), dtype = float)
 
-    for i in range(size - 1):
+    for i in range(size):
         # The phsic_matrix's first column is the prediction for 2nd position!!!
-        dx = coords[i] + vel[i+1] * dt[i+1]
+        dx = coords[i] + vel[i] * dt[i]
         physic_normal[f_id][i] = dx
-        
+
 """
 Obviously, the output:
 ...
@@ -80,7 +75,42 @@ is stupid!
 """
 
 # Pure physics-based model ----- advanced:
-better_matrix = np.array()
+from julia import Julia
+jl = Julia(compiled_modules=False)
+from julia import Interpolations
+
+physic_better = {}
+for f_id in flights:
+    coords = flights[f_id]["coords"]
+    vel = flights[f_id]["vel"]
+    dt = flights[f_id]["dt"]
+
+    size = len(coords) - 1
+    physic_better[f_id] = np.zeros((size, 3), dtype = float)
+
+    for i in range(1, size - 3):
+        x = coords[[i-2, i-1, i+1, i+2], 0]
+        y = coords[[i-2, i-1, i+1, i+2], 1]
+        z = coords[[i-2, i-1, i+1, i+2], 2]
+
+        vx = vel[[i-2, i-1, i+1, i+2], 0]
+        vy = vel[[i-2, i-1, i+1, i+2], 1]
+        vz = vel[[i-2, i-1, i+1, i+2], 2]
+
+        interpol_x = jl.CubicHermiteInterpolation(x, y, vy/vx)
+        interpol_y = jl.CubicHermiteInterpolation(y, z, vz/vy)
+        interpol_z = jl.CubicHermiteInterpolation(x, z, vz/vx)
+
+        # Get the Spline prediction:
+        t = dt[i-2] + dt[i-1] 
+        spline = [
+            interpol_x(t), interpol_y(t), interpol_z(t)
+        ]
+
+        # Calculate the Constant-Acceleration prediction:
+        a = (vel[i+1] - vel[i-1]) / (dt[i-1] + dt[i])
+        ca = coords[i] + vel[i] * dt[i] + 0.5 * a * dt[i] * dt[i]
+
 
 # Physics-ML model:
 
