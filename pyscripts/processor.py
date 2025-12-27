@@ -77,7 +77,6 @@ is stupid!
 # Pure physics-based model ----- advanced:
 from julia import Julia
 jl = Julia(compiled_modules=False)
-from julia import Interpolations
 
 physic_better = {}
 for f_id in flights:
@@ -101,7 +100,7 @@ for f_id in flights:
         p = coords[idx]
         v = vel[idx]
 
-        spline_x = jl.CubicHermiteInterpolation(t, p[:,0], v[:,1])
+        spline_x = jl.CubicHermiteInterpolation(t, p[:,0], v[:,0])
         spline_y = jl.CubicHermiteInterpolation(t, p[:,1], v[:,1])
         spline_z = jl.CubicHermiteInterpolation(t, p[:,2], v[:,2])
 
@@ -112,11 +111,11 @@ for f_id in flights:
 
         # Calculate the Constant-Acceleration prediction:
         a = (vel[i+1] - vel[i-1]) / (dt[i-1] + dt[i])
-        ca = coords[i] + vel[i] * dt[i] + 0.5 * a * dt[i]**2
+        ca = coords[i-1] + vel[i-1] * dt[i-1] + a/2 * dt[i-1]**2
 
         # Local curvature:
-        speed = np.linal.norm(vel[i])
-        if speed < 1e-7:
+        speed = np.linalg.norm(vel[i])
+        if speed < 1e-7 | speed > 1e+7:
             k = 0.0
         else:
             k = np.linalg.norm(np.cross(vel[i], a)) / (speed**3)
