@@ -112,7 +112,10 @@ for f_id in flights:
 
         # Calculate the Constant-Acceleration prediction:
         a = (vel[i+1] - vel[i-1]) / (dt[i-1] + dt[i])
-        ca = coords[i] + vel[i] * dt[i] + 0.5 * a * dt[i] * dt[i]
+        ca = coords[i] + vel[i] * dt[i] + 0.5 * a * dt[i]**2
+
+        # Local curvature:
+        k = abs(v[i] + a) / v[i]**2
 
 
 # Physics-ML model:
