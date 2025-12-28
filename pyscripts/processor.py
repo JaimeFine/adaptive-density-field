@@ -197,16 +197,32 @@ for f_id in flights:
 
     losses_mahalanobis[f_id] = relative_mahala
 
-print(losses_mahalanobis)
+# ---------------- Block 4 ---------------- #
+#            Export losses to CSV           #
+# ----------------------------------------- #
 
-# ---------------- Block 4 ---------------- # 
+import csv
+
+rows = []
+for f_id, losses in losses_mahalanobis.items():
+    for idx, loss in enumerate(losses):
+        rows.append([f_id, idx, loss])
+
+csv_path = "C:/Users/13647/OneDrive/Desktop/flight_loss.csv"
+with open(csv_path, "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["flight_id", "point_index", "mahalanobis_loss"])
+    writer.writerows(rows)
+
+print(f"CSV file saved to {csv_path}")
+
+
+# ---------------- Block 5 ---------------- # 
 #              POI Detection                #
 # ----------------------------------------- #
 
-
+# I am thinking about putting all this in RStudio
+# For a better visualization and a faster prototyping
 
 # Physics-ML model:
-
-
 # Sparse attention?
-
