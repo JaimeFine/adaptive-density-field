@@ -110,9 +110,8 @@ physic_better = {}
 for f_id in flights:
     coords_raw = flights[f_id]["coords"]
     vel_raw = flights[f_id]["vel"]
-    dt_raw = flights[f_id]["dt"]
+    dt = flights[f_id]["dt"]
 
-    dt = dt_raw * 60
     vel = velocity_conversion(vel_raw, coords_raw[:,1])
     coords = flight_conversion(coords_raw)
     size = len(coords)
@@ -121,7 +120,7 @@ for f_id in flights:
     a = np.zeros((size, 3))
 
     for i in range(1, size-1):
-        a[i] = (vel[i+1] - vel[i-1]) / (dt[i-1] + dt[i])
+        a[i] = (vel[i+1] - vel[i-1]) / ((dt[i-1] + dt[i]) * 60)
 
         speed = np.linalg.norm(vel[i])
         if speed > 1e-7:
@@ -139,10 +138,10 @@ for f_id in flights:
         idx = [i-2, i-1, i+1, i+2]
 
         t0 = 0.0
-        t1 = dt[i-2]
-        tm = dt[i-2] + dt[i-1]
-        t2 = dt[i-2] + dt[i-1] + dt[i]
-        t3 = dt[i-2] + dt[i-1] + dt[i] + dt[i+1]
+        t1 = dt[i-2] * 60
+        tm = (dt[i-2] + dt[i-1]) * 60
+        t2 = (dt[i-2] + dt[i-1] + dt[i]) * 60
+        t3 = (dt[i-2] + dt[i-1] + dt[i] + dt[i+1]) * 60
 
         t = np.array([t0, t1, t2, t3])
         p = coords[idx]
@@ -158,7 +157,7 @@ for f_id in flights:
         ], dtype=float)
 
         # Calculate the Constant-Acceleration prediction:
-        ca = coords[i-1] + vel[i-1] * dt[i-1] + a[i]/2 * dt[i-1]**2
+        ca = coords[i-1] + vel[i-1] * 60 * dt[i-1] + a[i] * 30 * dt[i-1]**2
 
         # Local curvature:
         speed = np.linalg.norm(vel[i])
