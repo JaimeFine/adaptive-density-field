@@ -57,10 +57,10 @@ def geodetic2ecef(lon, lat, hei):
 
     return np.array([x, y, z])
 
-def ecef2enu(xyz, lon, lat, hei):
-    ref_xyz = geodetic2ecef(lon, lat, hei)
-    lon = np.deg2rad(lon)
-    lat = np.deg2rad(lat)
+def ecef2enu(xyz, ref_lon, ref_lat, ref_hei):
+    ref_xyz = geodetic2ecef(ref_lon, ref_lat, ref_hei)
+    lon = np.deg2rad(ref_lon)
+    lat = np.deg2rad(ref_lat)
 
     sin_lat = np.sin(lat)
     cos_lat = np.cos(lat)
@@ -74,6 +74,28 @@ def ecef2enu(xyz, lon, lat, hei):
     ])
 
     return (xyz - ref_xyz) @ R.T
+
+def flight_conversion(coords):
+    ref_lon, ref_lat, ref_hei = coords[0]
+
+    ecef = np.array([
+        geodetic2ecef(lon, lat, hei)
+        for lon, lat, hei in coords
+    ])
+    enu = ecef2enu(ecef, ref_lon, ref_lat, ref_hei)
+
+    return enu
+
+def velocity_conversion(vel, lat):
+    lat_rad = np.deg2rad(lat)
+    
+    ve = vel[:,0] * (
+        1111412.84 * np.cos(lat_rad) - 93.5 * np.cos(3 * lat_rad)
+    )
+    vn = vel[:,1] * 111132.92
+    vu = vel[:,2]
+
+    return np.stack([ve, vn, vu], axis=1)
     
 # ------------------ Block 2 ----------------- # 
 #            Computation heavy zone            #
@@ -82,10 +104,11 @@ def ecef2enu(xyz, lon, lat, hei):
 # Pure physics-based model ----- basic:
 physic_normal = {}
 for f_id in flights:
-    coords = flights[f_id]["coords"]
+    coords_raw = flights[f_id]["coords"]
     vel = flights[f_id]["vel"]
     dt = flights[f_id]["dt"]
 
+    coords = flight_conversion(coords_raw)
     size = len(coords) - 1
     physic_normal[f_id] = np.zeros((size, 3), dtype = float)
 
@@ -116,9 +139,13 @@ flight_alpha = {}
 physic_better = {}
 
 for f_id in flights:
-    coords = flights[f_id]["coords"]
-    vel = flights[f_id]["vel"]
-    dt = flights[f_id]["dt"]
+    coords_raw = flights[f_id]["coords"]
+    vel_raw = flights[f_id]["vel"]
+    dt_raw = flights[f_id]["dt"]
+
+    dt = dt_raw * 60
+    vel = velocity_conversion(vel_raw, coords_raw[:,1])
+    coords = flight_conversion(coords_raw)
     size = len(coords)
 
     curvatures = []
@@ -169,7 +196,7 @@ for f_id in flights:
         if speed < 1e-7 or speed > 1e+7:
             k = 0.0
         else:
-            k = np.linalg.norm(np.cross(vel[i], a)) / (speed**3)
+            k = np.linalg.norm(np.cross(vel[i], a[i])) / (speed**3)
 
         w = np.exp(-flight_alpha[f_id] * k)
         pred = w * ca + (1 - w) * spline
