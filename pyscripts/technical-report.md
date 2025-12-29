@@ -21,12 +21,14 @@ Given:
 First compute the prime vertical radius of curvature:
 
 $$
+\tag{1.1.1}
 N(\varphi) = \frac{a}{\sqrt{1 - e^2 \sin^2\varphi}}
 $$
 
 Then ECEF coordinates $(x,y,z)$:
 
 $$
+\tag{1.1.2}
 \begin{aligned}
 x &= \left(N(\varphi) + h\right)\cos\varphi\cos\lambda \\
 y &= \left(N(\varphi) + h\right)\cos\varphi\sin\lambda \\
@@ -45,6 +47,7 @@ Pick a reference point (the origin of the local ENU frame in this case) with geo
 For any point with ECEF $(x,y,z)$, define the difference vector:
 
 $$
+\tag{1.2.1}
 \begin{bmatrix}
 \Delta x \\ \Delta y \\ \Delta z
 \end{bmatrix}=\begin{bmatrix}
@@ -55,6 +58,7 @@ $$
 And given the Rotation matrix and ENU coordinate at reference $(\varphi_0,\lambda_0,h_0)$:
 
 $$
+\tag{1.2.2}
 \mathbf{R}=\begin{bmatrix}
 \sin\varphi_0 & \cos\varphi_0 & 0 \\
 \cos\varphi_0\cdot\sin\lambda_0 & -\sin\varphi_0\cdot\sin\lambda_0 & \cos\lambda_0 \\
@@ -65,6 +69,7 @@ $$
 Therefore we have the calculation:
 
 $$
+\tag{1.2.3}
 \begin{bmatrix}
 E \\ N \\ U
 \end{bmatrix}=\begin{bmatrix}
@@ -122,22 +127,25 @@ For each flight:
 - Estimate local curvature $k$ using  
   
   $$
+  \tag{2.1.1}
   k = \frac{\lVert \mathbf{v} \times \mathbf{a} \rVert}{\lVert \mathbf{v} \rVert^3}
   $$
 
 - Compute a flight‑specific smoothing parameter 
    
   $$
+  \tag{2.1.2}
   \alpha = \frac{\ln 5}{k_{95}}
   $$
 
   where $k_{95}$ is the 95th percentile curvature  
 - For each timestamp, compute:
-  - **Spline prediction** using *CubicHermiteSpline*
+  - **Spline prediction** using `CubicHermiteSpline`
   - **Constant‑acceleration prediction**
 - Blend them using $w = e^{-\alpha k}$:
   
   $$
+  \tag{2.1.3}
   \hat{p} = w \, p_{\text{CA}} + (1 - w) \, p_{\text{spline}}
   $$
 
@@ -156,14 +164,16 @@ The loss is computed in four main steps:
 For each flight, I compare the predicted positions $\hat{p}_i$ with the actual converted coordinates $p_i$:
 
 $$
+\tag{2.2.1}
 r_i = \hat{p}_i - p_i
 $$
 
-Only interior points are used **[2 : size-2]** to avoid boundary artifacts from the spline and acceleration models.
+Only interior points are used `[2 : size-2]` to avoid boundary artifacts from the spline and acceleration models.
 
 The residuals are then centered:
 
 $$
+\tag{2.2.2}
 \tilde{r}_i = r_i - \bar{r}
 $$
 
@@ -174,6 +184,7 @@ This removes global bias and ensures the covariance reflects *shape* rather than
 The covariance of the centered residuals is computed as:
 
 $$
+\tag{2.2.3}
 \Sigma = \operatorname{Cov}(\tilde{r}) + \lambda I
 $$
 
@@ -186,6 +197,7 @@ The inverse covariance $\Sigma^{-1}$ defines the **Mahalanobis geometry** of the
 For each residual vector:
 
 $$
+\tag{2.2.4}
 d_i = \sqrt{\, \tilde{r}_i^\top \Sigma^{-1} \tilde{r}_i \,}
 $$
 
@@ -196,12 +208,14 @@ This distance penalizes errors more strongly along directions where the model is
 Because timestamps are not uniformly spaced, each error is scaled by a time‑dependent factor:
 
 $$
+\tag{2.2.5}
 t_i = \sqrt{\frac{\Delta t_i}{\bar{\Delta t}}}
 $$
 
 The final **time-relative Mahalanobis loss** is:
 
 $$
+\tag{2.2.6}
 L_i = \frac{d_i}{t_i}
 $$
 
@@ -219,9 +233,10 @@ The POI detection pipeline consists of three main stages:
 
 ### 3.1 Normalize the Loss Scores
 
-For each flight, the Mahalanobis losses are rescaled to the interval **[0, 1]**:
+For each flight, the Mahalanobis losses are rescaled to the interval `[0, 1]`:
 
 $$
+\tag{3.1}
 s_i = \frac{L_i - \min(L)}{\max(L) - \min(L) + \varepsilon}
 $$
 
@@ -236,6 +251,7 @@ Here, I introduced an element called POI score, which indicates how anomalous ea
 A point is flagged as a POI if its normalized score exceeds a fixed threshold:
 
 $$
+\tag{3.2}
 s_i \ge 0.75
 $$
 
