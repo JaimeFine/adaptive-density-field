@@ -174,7 +174,7 @@ This removes global bias and ensures the covariance reflects *shape* rather than
 The covariance of the centered residuals is computed as:
 
 $$
-\Sigma = \operatorname{Cov}(\tilde{r}) + \lambda I
+\Sigma = \mathrm{Cov}(\tilde{r}) + \lambda I
 $$
 
 A small Tikhonov regularization term $\lambda = 10^{-5}$ stabilizes the inversion of $\Sigma$, especially for nearly collinear trajectories.
