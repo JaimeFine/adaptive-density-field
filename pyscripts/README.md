@@ -24,8 +24,8 @@ Given:
 First compute the prime vertical radius of curvature:
 
 $$
-\tag{1.1.1}
 N(\varphi) = \frac{a}{\sqrt{1 - e^2 \sin^2\varphi}}
+\qquad{1.1.1}
 $$
 
 Then ECEF coordinates $(x,y,z)$:
@@ -128,20 +128,25 @@ For each flight:
 - Convert raw coordinates into a consistent Cartesian frame  
 - Compute velocity and approximate acceleration  
 - Estimate local curvature $k$ using  
+  
   $$
   \tag{2.1.1}
   k = \frac{\lVert \mathbf{v} \times \mathbf{a} \rVert}{\lVert \mathbf{v} \rVert^3}
   $$
-- Compute a flight‑specific smoothing parameter  
+
+- Compute a flight‑specific smoothing parameter 
+   
   $$
   \tag{2.1.2}
   \alpha = \frac{\ln 5}{k_{95}}
   $$
+
   where $k_{95}$ is the 95th percentile curvature  
 - For each timestamp, compute:
   - **Spline prediction** using `CubicHermiteSpline`
   - **Constant‑acceleration prediction**
 - Blend them using $w = e^{-\alpha k}$:
+  
   $$
   \tag{2.1.3}
   \hat{p} = w \, p_{\text{CA}} + (1 - w) \, p_{\text{spline}}
