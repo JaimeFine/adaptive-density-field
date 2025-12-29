@@ -126,17 +126,17 @@ For each flight:
 - Compute velocity and approximate acceleration  
 - Estimate local curvature $k$ using  
   
-  $$
-  \tag{2.1.1}
-  k = \frac{\lVert \mathbf{v} \times \mathbf{a} \rVert}{\lVert \mathbf{v} \rVert^3}
-  $$
+$$
+\tag{2.1.1}
+k = \frac{\lVert \mathbf{v} \times \mathbf{a} \rVert}{\lVert \mathbf{v} \rVert^3}
+$$
 
 - Compute a flight‑specific smoothing parameter 
    
-  $$
-  \tag{2.1.2}
-  \alpha = \frac{\ln 5}{k_{95}}
-  $$
+$$
+\tag{2.1.2}
+\alpha = \frac{\ln 5}{k_{95}}
+$$
 
   where $k_{95}$ is the 95th percentile curvature  
 - For each timestamp, compute:
@@ -144,10 +144,10 @@ For each flight:
   - **Constant‑acceleration prediction**
 - Blend them using $w = e^{-\alpha k}$:
   
-  $$
-  \tag{2.1.3}
-  \hat{p} = w \, p_{\text{CA}} + (1 - w) \, p_{\text{spline}}
-  $$
+$$
+\tag{2.1.3}
+\hat{p} = w \, p_{\text{CA}} + (1 - w) \, p_{\text{spline}}
+$$
 
 This yields a smooth, curvature‑aware prediction for each flight.
 
@@ -198,7 +198,7 @@ For each residual vector:
 
 $$
 \tag{2.2.4}
-d_i = \sqrt{\, \tilde{r}_i^\top \Sigma^{-1} \tilde{r}_i \,}
+d_i = \sqrt{\tilde{r}_i^\top \Sigma^{-1} \tilde{r}_i}
 $$
 
 This distance penalizes errors more strongly along directions where the model is normally precise, and less along directions with naturally higher variance.
