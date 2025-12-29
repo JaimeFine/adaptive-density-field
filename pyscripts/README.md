@@ -25,7 +25,7 @@ First compute the prime vertical radius of curvature:
 
 $$
 N(\varphi) = \frac{a}{\sqrt{1 - e^2 \sin^2\varphi}}
-\hfill{1.1.1}
+\quad (1.1.1)
 $$
 
 Then ECEF coordinates $(x,y,z)$:
