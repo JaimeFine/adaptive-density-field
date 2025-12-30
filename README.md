@@ -1,4 +1,4 @@
-# Trajectory-Based Urban Community Detection Project
+# Physics-informed Semantic Airspace Infrastructure Discovery From Trajectory Data
 
 > This project is still in progress
 > 
