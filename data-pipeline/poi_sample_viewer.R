@@ -7,9 +7,9 @@ library(MASS)
 pois <- read.csv("poi_data.csv")
 
 set.seed(42)
-pois_vis <- pois %>% sample_n(min(250000, n()))
+pois_vis <- pois %>% sample_n(min(100000, n()))
 
-# Sample view with Heatmap
+# Sample view with Heat map
 leaflet(pois_vis) %>%
   addProviderTiles("CartoDB.Positron") %>%
   setView(lng = 104.0667, lat = 30.6667, zoom = 3) %>%
@@ -19,6 +19,15 @@ leaflet(pois_vis) %>%
     intensity = ~poi_score,
     blur = 10,
     max = max(pois_vis$poi_score, na.rm = TRUE)
+  )
+
+leaflet(pois_vis) %>%
+  addTiles() %>%
+  setView(lng = 104.0667, lat = 30.6667, zoom = 3) %>%
+  addCircleMarkers(
+    color = "red", fillColor = "orange",
+    fillOpacity = 0.4, radius = 1,
+    popup = "POI"
   )
 
 # Sample view with KDE algorithm
