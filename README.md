@@ -37,6 +37,7 @@ project/
 
 ---
 
+<!--
 ## How It Works
 
 1. **Data Cleaning & Preprocessing**
