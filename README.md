@@ -6,7 +6,7 @@
 
 ## Project Goal
 
-Use aircraft trajectory data around Chengdu to detect spatial communities of flight trajectories, analyze patterns, and visualize them on maps.
+Use aircraft trajectory data to detect spatial communities of flight trajectories, analyze patterns, and visualize them on maps.
 
 -----
 
@@ -14,42 +14,33 @@ Use aircraft trajectory data around Chengdu to detect spatial communities of fli
 ```txt
 project/
   data/                     # Raw and processed data
-    cleaned.csv
-    chengdu.geo.json
-    flight_routes.geojson
-    shuangliu.csv
-  pyscripts/                # Python scripts
-    edgebuilder.py          # Build graph edges from trajectory points
-    embedder.py             # Train Word2Vec on trajectory sequences
-    infomapper.py           # Run Infomap community detection
-    visualizer.py           # Visualize trajectories and communities
-  rscripts/                 # R scripts for data cleaning or plotting
-    cleaner.R
-    turner.R
-    viewer.R
-  outputs/                  # All generated outputs
-    w2v.model
-    track_vectors.txt
-    graph_edges.csv
-    communities.csv
-    communities_map.html    # Ignored due to file size
-    infomap_output.txt
-    maps/                   # PNG plots: heatmaps, clutterplots, trajectories
-      clutterplot.png
-      conciseplot.png
-      heatmap.png
-      trajectory.png
-      chengdu.png
-  drafts/                   # Deprecated or experimental code/outputs
-  notebooks/                # Optional Jupyter notebooks (currently empty)
+    flight_loss.csv
+  data-pipeline/            # Programs for data proessing and data visualization
+    geojson_generator.R
+    loss_viewer.R
+    poi_sample_viewer.R
+  poi-detector/             # Python program for POI detection
+    processor.py
+    technical-report.md
+    technical-report-format1.pdf
+    technical-report-format2.pdf
+  notebooks/                # Recording all thoughts and brainstormed idea
+    poi_detection.ipynb
+    motion_prediction.ipynb
+    base_map_building.ipynb
+  plots/                  # All generated outputs
+    kdeplot.png
+    lossplot.png
+    poiplot.png
+  drafts/                   # Deprecated or experimental stuff, or previous version
 ```
 
 ---
 
 ## How It Works
 
-1. **Data Cleaning**
-   Used `cleaner.R` and `turner.R` to clean raw CSV data and convert to GeoJSON.
+1. **Data Cleaning & Preprocessing**
+   Used `geojson_generator.R` to clean raw CSV data and convert to GeoJSON.
 
 2. **Sequence Generation & Embedding**
    `embedder.py` generates sequences of trajectory points and trains Word2Vec (`w2v.model` / `track_vectors.txt`) to embed points in a vector space.

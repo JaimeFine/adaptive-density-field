@@ -3,6 +3,9 @@ library(dplyr)
 library(leaflet)
 library(leaflet.extras)
 library(MASS)
+library(sf)
+
+sf::sf_use_s2(FALSE)
 
 pois <- read.csv("poi_data.csv")
 
@@ -62,3 +65,37 @@ persp(
   zlab = "Density"
 )
 
+# The Filter:
+
+border <- st_read("china.json")
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = 104.0667, lat = 30.6667, zoom = 3) %>%
+  addPolygons(
+    data = border_fixed,
+    color = "red",
+    fillColor = "orange",
+    fillOpacity = 0.4,
+    weight = 2,
+    popup = "China Border"
+  )
+
+border_fixed <- st_make_valid(border)
+pois_sf <- st_as_sf(
+  pois, coords = c("lon", "lat"), crs = 4326
+)
+
+china_poi <- st_intersection(pois_sf, border)
+
+set.seed(42)
+pois_mini <- china_poi %>% sample_n(min(150000, n()))
+
+leaflet(pois_mini) %>%
+  addTiles() %>%
+  setView(lng = 104.0667, lat = 30.6667, zoom = 3) %>%
+  addCircleMarkers(
+    color = "red", fillColor = "orange",
+    fillOpacity = 0.4, radius = 1,
+    popup = "POI"
+  )
