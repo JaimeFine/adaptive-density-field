@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this idea or theory, please cite it as below."
+title: "Adaptive Density Field (ADF) with FAISS-Accelerated Spatial Attention"
+authors:
+  - family-names: "Fan"
+    given-names: "Zhaowen"
+version: "1.0.0"
+date-released: "2025-01-01"
+doi: ""
+url: "https://github.com/JaimeFine/TrajectoryAnalysis"

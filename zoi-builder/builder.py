@@ -51,21 +51,13 @@ n = len(pos)
 # ------------- Creating ADF --------------- #
 
 quantizer = faiss.IndexFlatL2(3)
+# 4096 is the 12 power of two, interesting!
 index = faiss.IndexIVFFlat(quantizer, 3, 4096)
 
 index.train(pos)
 index.add(pos)
 
 index.nprobe = 16
-
-
-Fvalues = np.array([
-    adf(p)
-    for p in pos
-])
-
-df["ADF"] = Fvalues
-
 
 # ----------------- Benchmarking --------------- #
 
@@ -75,12 +67,21 @@ t0 = time.time()
 for p in pos[:Q]:
     _ = adf(p)
 
-
 t1 = time.time()
 print("Time per query:", (t1 - t0) / Q, "seconds")
 
 """
 Note:
     I switched from Direct FlatL2 to IVF-Flat as the suggestion from AI,
-    and the Time per query reduced from 0.00703 to 0.000107
+    and the Time per query reduced from 0.00703 to 0.000107!!!
 """
+
+# ---------------- Real Stuff ------------------ #
+
+# Replace this code with real data:
+Fvalues = np.array([
+    adf(p)
+    for p in pos
+])
+
+df["ADF"] = Fvalues
