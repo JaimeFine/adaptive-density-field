@@ -20,15 +20,12 @@ def geodetic2ecef(lon, lat, hei):
 
     return np.array([x, y, z])
 
-def gaussian_kernel(x, xi, sigma_inv):
-    diff = x - xi
-    return np.exp(-0.5 * diff @ sigma_inv @ diff)
-
 def adf(x, k=100, sigma0=500.0):
     _, idx = index.search(x.reshape(1, 3), k)
     neighbors = pos[idx[0]]
     scores = s[idx[0]]
 
+    # Vectorized kernel function:
     diff = neighbors - x
 
     sigma = sigma0 / (scores + 1e-6)
