@@ -24,71 +24,40 @@ def geodetic2ecef(lon, lat, hei):
 
     return np.array([x, y, z])
 
-def ecef2enu(xyz, ref_lon, ref_lat, ref_hei):
-    ref_xyz = geodetic2ecef(ref_lon, ref_lat, ref_hei)
-    lon = np.deg2rad(ref_lon)
-    lat = np.deg2rad(ref_lat)
-
-    sin_lat = np.sin(lat)
-    cos_lat = np.cos(lat)
-    sin_lon = np.sin(lon)
-    cos_lon = np.cos(lon)
-
-    R = np.array([
-        [-sin_lon, cos_lon, 0],
-        [-sin_lat*cos_lon, -sin_lat*sin_lon, cos_lat],
-        [cos_lat*cos_lon, cos_lat*sin_lon, sin_lat]
-    ])
-
-    return (xyz - ref_xyz) @ R.T
-
-def flight_conversion(coords):
-    ref_lon = coords["lon"].iloc[0]
-    ref_lat = coords["lat"].iloc[0]
-    ref_hei = coords["alt"].iloc[0]
-
-    arr = coords[["lon", "lat", "alt"]].to_numpy(dtype=float)
-    ecef = np.array([
-        geodetic2ecef(lon, lat, hei)
-        for lon, lat, hei in arr
-    ])
-    enu = ecef2enu(ecef, ref_lon, ref_lat, ref_hei)
-
-    return enu
-
-def anisotropic_gaussian_kernel(x, xi, Sigma_inv):
+def gaussian_kernel(x, xi, sigma_inv):
     diff = x - xi
-    return np.exp(-0.5 * diff.T @ Sigma_inv @ diff)
+    return np.exp(-0.5 * diff @ sigma_inv @ diff)
 
-def attention_distribution_function(x, poi_positions, poi_scores, Sigma_inv):
+def adf(x, k=100, sigma0=500.0):
+    _, idx = index.search(x.reshape(1, 3), k)
+
     Func = 0.0
-    for i, s in zip(poi_positions, poi_scores):
-        Func += s * anisotropic_gaussian_kernel(x, i, Sigma_inv)
+    for i in idx[0]:
+        sigma = sigma0 / (s[i] + 1e-6)
+        sigma_inv = np.eye(3) / (sigma ** 2)
+        Func += s[i] * gaussian_kernel(x, pos[i], sigma_inv)
     return Func
 
 # ------------- Importing Data -------------- #
 
 df = pd.read_csv("D:/ADataBase/china_poi.csv")
-x_raw = df[["lon", "lat", "alt"]]
-x = flight_conversion(x_raw)
-x = x.astype('float32')
+
+pos = np.vstack([
+    geodetic2ecef(lon, lat, alt)
+    for lon, lat, alt in df[["lon", "lat", "alt"]].to_numpy()
+]).astype("float32")
 s = df["poi_score"]
-n = x.shape[0]
+n = len(pos)
+
+index = faiss.IndexFlatL2(3)
+index.add(pos)
 
 # ------------- Form the Clusters --------------- #
 
-cluster_baby = hdbscan.HDBSCAN(
-    min_cluster_size=500,
-    min_samples=50,
-    metric='euclidean',
-    core_dist_n_jobs=1,
-    algorithm='best',
-    approx_min_span_tree=True
-)
+Fvalues = np.array([
+    adf(p)
+    for p in pos
+])
 
-labels = cluster_baby.fit_predict(x)
+df["ADF"] = Fvalues
 
-for i in labels:
-    flight_conversion(i)
-
-attention_distribution_function(labels, x, s)
