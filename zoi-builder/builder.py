@@ -1,8 +1,12 @@
 import numpy as np
+from numpy.linalg import inv
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import multivariate_normal
 import pandas as pd
+import hdbscan
 import faiss
+
+# -------------- Define the Functions ---------------- #
 
 axis = 6378137.0
 flattening = 1 / 298.257223563
@@ -52,10 +56,39 @@ def flight_conversion(coords):
 
     return enu
 
+def anisotropic_gaussian_kernel(x, xi, Sigma_inv):
+    diff = x - xi
+    return np.exp(-0.5 * diff.T @ Sigma_inv @ diff)
+
+def attention_distribution_function(x, poi_positions, poi_scores, Sigma_inv):
+    Func = 0.0
+    for i, s in zip(poi_positions, poi_scores):
+        Func += s * anisotropic_gaussian_kernel(x, i, Sigma_inv)
+    return Func
+
+# ------------- Importing Data -------------- #
+
 df = pd.read_csv("D:/ADataBase/china_poi.csv")
 x_raw = df[["lon", "lat", "alt"]]
 x = flight_conversion(x_raw)
 x = x.astype('float32')
 s = df["poi_score"]
-covs = np.cov()
 n = x.shape[0]
+
+# ------------- Form the Clusters --------------- #
+
+cluster_baby = hdbscan.HDBSCAN(
+    min_cluster_size=500,
+    min_samples=50,
+    metric='euclidean',
+    core_dist_n_jobs=1,
+    algorithm='best',
+    approx_min_span_tree=True
+)
+
+labels = cluster_baby.fit_predict(x)
+
+for i in labels:
+    flight_conversion(i)
+
+attention_distribution_function(labels, x, s)
