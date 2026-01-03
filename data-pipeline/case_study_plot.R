@@ -1,16 +1,21 @@
 library(dplyr)
 library(leaflet)
 library(scales)
+library(sf)
 
 poi <- read.csv("poi_background.csv")
-traj <- read.csv("trajectory_adf_zoi.csv")
+track <- read.csv("trajectory_adf_zoi.csv")
+chengdu <- st_read("chengdu.geo.json")
 
-set.seed(42)
-poi_vis <- poi %>% sample_n(min(100000, n()))
+poi <- st_as_sf(
+  poi, coords = c("lon", "lat"), crs = 4326
+)
+
+poi_chengdu <- st_intersection(poi, chengdu)
 
 pal_adf <- colorNumeric(
   palette = "viridis",
-  domain = traj$ADF
+  domain = track$ADF
 )
 
 m <- leaflet() %>%
@@ -30,7 +35,7 @@ m <- m %>%
 
 m <- m %>%
   addCircleMarkers(
-    data = filter(traj, ZOI == 1),
+    data = filter(track, ZOI == 1),
     lng = ~lon,
     lat = ~lat,
     radius = 1,
@@ -41,7 +46,7 @@ m <- m %>%
 
 m <- m %>%
   addCircleMarkers(
-    data = traj,
+    data = track,
     lng = ~lon,
     lat = ~lat,
     radius = 3,
@@ -54,8 +59,8 @@ m <- m %>%
 
 m <- m %>%
   addPolylines(
-    lng = traj$lon,
-    lat = traj$lat,
+    lng = track$lon,
+    lat = track$lat,
     color = "white",
     weight = 2,
     opacity = 0.8,
@@ -66,7 +71,7 @@ m <- m %>%
   addLegend(
     position = "bottomright",
     pal = pal_adf,
-    values = traj$ADF,
+    values = track$ADF,
     title = "ADF Value",
     opacity = 1
   ) %>%
