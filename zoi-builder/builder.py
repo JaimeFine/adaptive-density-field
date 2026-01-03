@@ -70,18 +70,83 @@ for p in pos[:Q]:
 t1 = time.time()
 print("Time per query:", (t1 - t0) / Q, "seconds")
 
-"""
-Note:
-    I switched from Direct FlatL2 to IVF-Flat as the suggestion from AI,
-    and the Time per query reduced from 0.00703 to 0.000107!!!
-"""
+# ------------------------------------------ #
+#               ZOI Extraction               #
+# ------------------------------------------ #
 
-# ---------------- Real Stuff ------------------ #
+from gensim.models import Word2Vec
+import json
 
-# Replace this code with real data:
-Fvalues = np.array([
-    adf(p)
-    for p in pos
+with open("D:/ADataBase/flights_data_geojson/2024-12-16/2024-12-16-CTU_processed.geojson") as flight:
+    track = json.load(flight)
+
+track_coords = np.array([
+    f["geometry"]["coordinates"] 
+    for f in track["features"] 
+    if f["geometry"]["type"] == "Point"
 ])
 
-df["ADF"] = Fvalues
+def trajectory2ecef(track):
+    return np.vstack([
+        geodetic2ecef(lon, lat, alt)
+        for lon, lat, alt in track
+    ]).astype("float32")
+
+def get_adf_value(track):
+    return np.array([adf(p) for p in track])
+
+def zoi_masking(track, alpha):
+    baseline = np.median(track)
+    return track >= alpha * baseline
+
+track_converted = trajectory2ecef(track_coords)
+track_adf = get_adf_value(track_converted)
+
+zoi_mask = zoi_masking(track_adf, 1.3)
+
+track_df = pd.DataFrame({
+    "lon": track_coords[:, 0],
+    "lat": track_coords[:, 1],
+    "alt": track_coords[:, 2],
+    "ADF": track_adf,
+    "ZOI": zoi_mask.astype(int)
+})
+
+# Sample visualization in 2D (3D is not ideal for visualization)
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(9, 6))
+
+plt.scatter(df["lon"], df["lat"], s=1, alpha=0.03, color="gray")
+
+plt.scatter(
+    track_df["lon"],
+    track_df["lat"],
+    c=track_df["ADF"],
+    cmap="viridis",
+    s=4
+)
+
+zoi_df = track_df[track_df["ZOI"] == 1]
+plt.scatter(
+    zoi_df["lon"],
+    zoi_df["lat"],
+    color="red",
+    s=6,
+    label="ZOI"
+)
+
+plt.plot(track_df["lon"], track_df["lat"], color="white", linewidth=1)
+
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.title("Trajectory-Conditioned ZOI via Adaptive Density Field")
+plt.legend()
+plt.show()
+
+# Save for R's leaflet:
+df[["lon", "lat"]].to_csv(
+    "poi_background.csv", index=False
+)
+
+track_df.to_csv("trajectory_adf_zoi.csv", index=False)

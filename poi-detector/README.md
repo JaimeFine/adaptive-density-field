@@ -2,7 +2,6 @@
 
 **Dated: December 29, 2025**
 
-
 ## 1 Preprocessing the Flight Data
 
 ### 1.1 Coordinate Conversion: WGS84 Geodetic to ECEF
