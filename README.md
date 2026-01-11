@@ -15,23 +15,31 @@ Use aircraft trajectory data to detect spatial communities of flight trajectorie
 project/
   data/                     # Raw and processed data
     flight_loss.csv
-  data-pipeline/            # Programs for data proessing and data visualization
+    poi_back_ground.csv
+    trajectory_adf_zoi.csv
+    chengdu.geo.json
+  case-study/               # Programs and relevant plots in case-study section
+    builder.py
+    plot.R
+    casestudyplot.png
+  appendix/                 # Programs and relevant plots in the appendix section
     geojson_generator.R
     loss_viewer.R
     poi_sample_viewer.R
-  poi-detector/             # Python program for POI detection
     processor.py
     technical-report.md
     technical-report-format1.pdf
     technical-report-format2.pdf
+    kdeplot.png
+    lossplot.png
+    poiplot.png
   notebooks/                # Recording all thoughts and brainstormed idea
     poi_detection.ipynb
     motion_prediction.ipynb
     base_map_building.ipynb
-  plots/                  # All generated outputs
-    kdeplot.png
-    lossplot.png
-    poiplot.png
+  graphs/                   # All graphs shown in thesis
+    diagram.pdf
+    plot2.pdf
   drafts/                   # Deprecated or experimental stuff, or previous version
 ```
 
