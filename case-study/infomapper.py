@@ -2,28 +2,26 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 from infomap import Infomap
-from scipy.spatial import ConvexHull
+from scipy.spatial import cKDTree, ConvexHull
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("C:/Users/13647/OneDrive/Desktop/MiMundo/Projects/TrajectoryAnalysis/data/trajectory_adf_zoi.csv")
 
-G = nx.Graph()
-
-for idx, row in df.iterrows():
-    G.add_node(idx, lon=row['lon'], lat=row['lat'], adf=row['ADF'])
+coords = df[['lon', 'lat']].values
+tree = cKDTree(coords)
 
 sigma = 0.01    # A spatial decay parameter
-for i, row_i in df.iterrows():
-    for j, row_j in df.iterrows():
-        if i >= j:
-            continue
-        # Edge weight = min(ADF_i, ADF_j) * spatial decay
-        distance = np.sqrt(
-            (row_i['lon'] - row_j['lon'])**2 + (row_i['lat'] - row_j['lat'])**2
-        )
-        weight = min(row_i['ADF'], row_j['ADF']) * np.exp(-distance / sigma)
-        if weight > 0:
-            G.add_edge(i, j, weight=weight)
+max_dist = sigma * 5
+G = nx.Graph()
+
+G.add_nodes_from(range(len(df)))
+pairs = tree.query_pairs(r=max_dist)
+
+for i, j in pairs:
+    dist = np.linalg.norm(coords[i] - coords[j])
+    weight = min(df.at[i, 'ADF'], df.at[j, 'ADF']) * np.exp(-dist / sigma)
+    if weight > 0:
+        G.add_edge(i, j, weight=weight)
 
 infomap_wrapper = Infomap("--two-level --silent")
 
