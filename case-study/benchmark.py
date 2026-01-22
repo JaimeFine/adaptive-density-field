@@ -99,14 +99,18 @@ for comm_id in unique_comms:
     
     iter_end = time.perf_counter()
     print(f"{int(comm_id):<10} | {num_points:<10} | {iter_end - iter_start:>14.6f}s")
-    
+
 print("-" * 50)
 print(f"Total Hull Calculation Time: {time.perf_counter() - hull_start_time:.4f}s")
 print("="*50 + "\n")
 
 gdf_list = []
 for comm_id, poly in community_polygons.items():
-    gdf_list.append(gpd.GeoDataFrame({'community':[comm_id]}, geometry=[poly]))
+    gdf_list.append(gpd.GeoDataFrame(
+        {'community':[comm_id]}, 
+        geometry=[poly], 
+        crs="EPSG:4326"  # WGS84 lat/lon
+    ))
 
 gdf = pd.concat(gdf_list, ignore_index=True)
 gdf.to_file("zoi_polygons.geojson", driver="GeoJSON")
