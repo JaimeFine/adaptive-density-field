@@ -25,17 +25,22 @@ for s_val in sigma_values:
     max_dist = s_val * 5
     pairs = tree.query_pairs(r=max_dist)
     
-    # B. Graph Construction
+    # B. Vectorized Graph Construction
+    if pairs:
+        pair_array = np.array(list(pairs))
+        i_arr, j_arr = pair_array.T
+        coords_i = coords[i_arr]
+        coords_j = coords[j_arr]
+        dists = np.linalg.norm(coords_i - coords_j, axis=1)
+        adf_mins = np.minimum(adf_values[i_arr], adf_values[j_arr])
+        weights = adf_mins * np.exp(-dists / s_val)
+        mask = weights > 0
+        edge_list = list(zip(i_arr[mask], j_arr[mask], weights[mask]))
+    else:
+        edge_list = []
+    
     G = nx.Graph()
     G.add_nodes_from(range(len(df)))
-    
-    edge_list = []
-    for i, j in pairs:
-        dist = np.linalg.norm(coords[i] - coords[j])
-        weight = min(adf_values[i], adf_values[j]) * np.exp(-dist / s_val)
-        if weight > 0:
-            edge_list.append((i, j, weight))
-    
     G.add_weighted_edges_from(edge_list)
     
     # C. Infomap Community Detection
