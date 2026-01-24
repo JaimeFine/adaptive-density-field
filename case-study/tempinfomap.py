@@ -12,7 +12,7 @@ import geopandas as gpd
 t_start = time.perf_counter()
 
 print(f"[{time.perf_counter()-t_start:.2f}s] Loading data...")
-df = pd.read_csv("C:/Users/13647/OneDrive/Desktop/MiMundo/Projects/TrajectoryAnalysis/case-study/trajectory_kde_zoi.csv")
+df = pd.read_csv("C:/Users/13647/OneDrive/Desktop/MiMundo/Projects/TrajectoryAnalysis/case-study/trajectory_vbkde_zoi.csv")
 
 # --- CONVERT TO GEOPANDAS + PROJECT TO METERS ---
 gdf_points = gpd.GeoDataFrame(
@@ -24,7 +24,7 @@ gdf_points = gpd.GeoDataFrame(
 # Use a local UTM zone for meters (Chengdu ~ EPSG:32648)
 gdf_points = gdf_points.to_crs(epsg=32648)
 coords_m = np.vstack([gdf_points.geometry.x.values, gdf_points.geometry.y.values]).T
-adf_values = df['KDE'].values
+adf_values = df['VBKDE'].values
 
 # --- BUILD GRAPH ---
 t0 = time.perf_counter()
@@ -110,6 +110,6 @@ for comm_id, poly in community_polygons.items():
 gdf = pd.concat(gdf_list, ignore_index=True)
 # Convert back to lat/lon for Leaflet
 gdf = gdf.to_crs(epsg=4326)
-gdf.to_file("zoi_polygons_meters_low.geojson", driver="GeoJSON")
+gdf.to_file("vbkde_polygon.geojson", driver="GeoJSON")
 
 print(f"Saved α-shape polygons in meters to 'zoi_polygons_meters.geojson'")
