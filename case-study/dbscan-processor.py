@@ -57,7 +57,6 @@ poi_labels = db.labels_
 core_poi_pos = poi_pos[poi_labels != -1]
 
 # Use Faiss to check which trajectory points are near these core clusters
-res = faiss.StandardGpuResources() # Optional: if you have GPU
 quantizer = faiss.IndexFlatL2(3)
 index_core = faiss.IndexFlatL2(3) 
 index_core.add(core_poi_pos)
