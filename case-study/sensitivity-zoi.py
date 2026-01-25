@@ -5,7 +5,6 @@ from infomap import Infomap
 from scipy.spatial import cKDTree
 import time
 import geopandas as gpd
-import networkx as nx
 
 # -------------- Define the Functions ---------------- #
 
@@ -43,14 +42,14 @@ def adf(x, k=100, sigma0=500.0):
 
 # ------------- Importing Data -------------- #
 
-df = pd.read_csv("D:/ADataBase/china_poi.csv")
+df_raw = pd.read_csv("D:/ADataBase/china_poi.csv")
 
 pos = np.vstack([
     geodetic2ecef(lon, lat, alt)
-    for lon, lat, alt in df[["lon", "lat", "alt"]].to_numpy()
+    for lon, lat, alt in df_raw[["lon", "lat", "alt"]].to_numpy()
 ]).astype("float32")
 
-s = df["poi_score"].to_numpy()
+s = df_raw["poi_score"].to_numpy()
 n = len(pos)
 
 # ------------- Creating ADF --------------- #
@@ -94,121 +93,102 @@ def zoi_masking(track, alpha):
 
 track_converted = trajectory2ecef(track_coords)
 track_adf = get_adf_value(track_converted)
-baseline_adf = np.median(track_adf)
 
-df_track = pd.DataFrame({
-    "lon": track_coords[:, 0],
-    "lat": track_coords[:, 1],
-    "alt": track_coords[:, 2],
-    "ADF": track_adf
-})
+alphas = [1.1, 1.2, 1.3, 1.4, 1.5]
+results = []
 
-# --- PROJECT TO METERS ONCE (full trajectory) ---
-gdf = gpd.GeoDataFrame(df_track, geometry=gpd.points_from_xy(df_track.lon, df_track.lat), crs="EPSG:4326")
-gdf = gdf.to_crs(epsg=32648)
-coords_m = np.vstack([gdf.geometry.x, gdf.geometry.y]).T
+for a in alphas:
+    zoi_mask = zoi_masking(track_adf, a)
 
-# --- RUN GRAPH + INFOMAP ONCE ON FULL TRAJECTORY (fixed sigma=1000m) ---
-sigma_fixed = 1000.0
-
-t_graph_start = time.perf_counter()
-
-tree = cKDTree(coords_m)
-pairs = tree.query_pairs(r=sigma_fixed * 5)
-
-edge_list = []
-if len(pairs) > 0:
-    pair_arr = np.array(list(pairs))
-    i, j = pair_arr.T
-    dists = np.linalg.norm(coords_m[i] - coords_m[j], axis=1)
-    weights = np.minimum(track_adf[i], track_adf[j]) * np.exp(-dists / sigma_fixed)
-    mask = weights > 0
-    edge_list = list(zip(i[mask], j[mask], weights[mask]))
-
-im = Infomap("--two-level --silent")
-for u, v, w in edge_list:
-    im.add_link(int(u), int(v), float(w))
-im.run()
-
-# Assign communities to full dataframe (isolates get -1 later if needed)
-communities_full = [node.module_id for node in im.nodes]
-# Map back (Infomap only includes connected nodes; isolates are missing)
-community_map = {node.node_id: node.module_id for node in im.nodes}
-df_track['community'] = pd.Series(community_map).reindex(range(len(df_track))).fillna(-1).astype(int)
-
-# Metrics for the full run (this should exactly match your sigma=1000m sensitivity run)
-_, counts = np.unique(df_track['community'][df_track['community'] != -1], return_counts=True)
-valid_communities_full = sum(1 for count in counts if count >= 4)
-
-print(f"Full trajectory graph complete in {time.perf_counter() - t_graph_start:.2f}s")
-print(f"Full: Edges={len(edge_list)}, Valid Communities={valid_communities_full}")
-
-# --- SENSITIVITY LOOP OVER ALPHA (mask only; communities fixed) ---
-alphas_to_test = [1.1, 1.2, 1.3, 1.4, 1.5]
-sigma_fixed = 1000.0  # Must match the '1000' in your sigma test
-sensitivity_results = []
-
-print(f"{'Alpha':<10} | {'ZOI Pts':<10} | {'Edges':<12} | {'Communities':<12}")
-print("-" * 50)
-
-# Project the full trajectory to meters once to save time
-gdf_full = gpd.GeoDataFrame(
-    df_track, 
-    geometry=gpd.points_from_xy(df_track.lon, df_track.lat), 
-    crs="EPSG:4326"
-).to_crs(epsg=32648)
-coords_full_m = np.vstack([gdf_full.geometry.x, gdf_full.geometry.y]).T
-
-for a in alphas_to_test:
-    t_start = time.perf_counter()
-    
-    # STEP A: Apply the Alpha Mask (Just like your ZOI Extraction code)
-    is_zoi = track_adf >= (a * baseline_adf)
-    zoi_indices = np.where(is_zoi)[0]
-    
-    if len(zoi_indices) < 4:
-        continue
-        
-    # Get coordinates and ADF for ONLY the points that pass the alpha threshold
-    coords_zoi = coords_full_m[zoi_indices]
-    adf_zoi = track_adf[zoi_indices]
-    
-    # STEP B: Build Graph (Same logic as your Sigma sensitivity script)
-    tree = cKDTree(coords_zoi)
-    max_dist = sigma_fixed * 5
-    pairs = tree.query_pairs(r=max_dist)
-    
-    edge_list = []
-    if pairs:
-        pair_array = np.array(list(pairs))
-        i_idx, j_idx = pair_array.T
-        
-        # Calculate weights using the FIXED sigma
-        dists = np.linalg.norm(coords_zoi[i_idx] - coords_zoi[j_idx], axis=1)
-        weights = np.minimum(adf_zoi[i_idx], adf_zoi[j_idx]) * np.exp(-dists / sigma_fixed)
-        
-        mask = weights > 0
-        edge_list = list(zip(i_idx[mask], j_idx[mask], weights[mask]))
-
-    # STEP C: Run Infomap
-    im = Infomap("--two-level --silent")
-    for u, v, w in edge_list:
-        im.add_link(int(u), int(v), float(w))
-    im.run()
-    
-    # STEP D: Record Valid Communities (count >= 4)
-    communities = [node.module_id for node in im.nodes]
-    unique_comms, counts = np.unique(communities, return_counts=True)
-    valid_communities = sum(1 for count in counts if count >= 4)
-    
-    duration = time.perf_counter() - t_start
-    print(f"{a:<10.1f} | {len(zoi_indices):<10} | {len(edge_list):<12} | {valid_communities:<12}")
-    
-    sensitivity_results.append({
-        "alpha": a,
-        "zoi_pts": len(zoi_indices),
-        "num_communities": valid_communities
+    df = pd.DataFrame({
+        "lon": track_coords[:, 0],
+        "lat": track_coords[:, 1],
+        "alt": track_coords[:, 2],
+        "ADF": track_adf,
+        "ZOI": zoi_mask.astype(int)
     })
 
-# Export
-pd.DataFrame(sensitivity_results).to_csv("alpha_sensitivity_final.csv", index=False)
+    t_start = time.perf_counter()
+
+    # --- CONVERT TO GEOPANDAS + PROJECT TO METERS ---
+    gdf_points = gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df.lon, df.lat),
+        crs="EPSG:4326"  # WGS84
+    )
+
+    # Use a local UTM zone for meters (Chengdu ~ EPSG:32648)
+    gdf_points = gdf_points.to_crs(epsg=32648)
+    coords_m = np.vstack([gdf_points.geometry.x.values, gdf_points.geometry.y.values]).T
+    adf_values = df['ADF'].values
+
+    # --- BUILD GRAPH ---
+    t0 = time.perf_counter()
+    print(f"[{time.perf_counter()-t_start:.2f}s] Building KDTree...")
+    tree = cKDTree(coords_m)
+
+    sigma_m = 1000.0
+    max_dist = sigma_m * 5
+    pairs = tree.query_pairs(r=max_dist)
+    print(f"[{time.perf_counter()-t_start:.2f}s] Found {len(pairs)} potential edges.")
+
+    if len(pairs) > 0:
+        pair_array = np.fromiter(
+            (p for pair in pairs for p in pair),
+            dtype=np.int32
+        ).reshape(-1, 2)
+
+        i_idx = pair_array[:, 0]
+        j_idx = pair_array[:, 1]
+
+        # distances (vectorized)
+        diffs = coords_m[i_idx] - coords_m[j_idx]
+        dists = np.linalg.norm(diffs, axis=1)
+
+        # weights (vectorized)
+        adf_min = np.minimum(adf_values[i_idx], adf_values[j_idx])
+        weights = adf_min * np.exp(-dists / sigma_m)
+
+        # keep positive weights only
+        mask = weights > 0
+        i_idx = i_idx[mask]
+        j_idx = j_idx[mask]
+        weights = weights[mask]
+
+    else:
+        i_idx = j_idx = weights = np.array([])
+
+    print(f"Graph construction complete in {time.perf_counter() - t0:.2f}s")
+
+    # --- RUN INFOMAP ---
+    print(f"[{time.perf_counter()-t_start:.2f}s] Running Infomap...")
+    infomap_wrapper = Infomap("--two-level --silent")
+    for u, v, w in zip(i_idx, j_idx, weights):
+        infomap_wrapper.add_link(u, v, w)
+    infomap_wrapper.run()
+
+    communities_map = {node.node_id: node.module_id for node in infomap_wrapper.nodes}
+    df['community'] = df.index.map(communities_map).fillna(-1)
+
+    # 2. Filter communities by size (The "Scientific" Count)
+    communities = [node.module_id for node in infomap_wrapper.nodes]
+    unique_comms, counts = np.unique(communities, return_counts=True)
+    
+    valid_communities = sum(1 for count in counts if count >= 4)
+
+    # 3. Count ZOI points (where ZOI masking was True)
+    num_zoi_points = df['ZOI'].sum()
+
+    # 4. Store the results for this alpha value
+    results.append({
+        "alpha": a,
+        "Community numbers": valid_communities,
+        "ZOI numbers": num_zoi_points
+    })
+    
+    print(f"Alpha {a}: Found {valid_communities} communities and {num_zoi_points} ZOI points.")
+
+# --- AFTER THE LOOP: Export to CSV ---
+results_df = pd.DataFrame(results)
+results_df.to_csv("alpha_sensitivity_report.csv", index=False)
+print("\nSensitivity report saved to 'alpha_sensitivity_report.csv'")
