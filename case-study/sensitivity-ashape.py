@@ -5,6 +5,7 @@ from KDEpy import FFTKDE
 from skimage import measure
 import geopandas as gpd
 from scipy.spatial import cKDTree
+from shapely.geometry import LineString
 import time
 
 t_start = time.perf_counter()
@@ -33,28 +34,16 @@ max_dist = sigma_m * 5
 pairs = tree.query_pairs(r=max_dist)
 print(f"[{time.perf_counter()-t_start:.2f}s] Found {len(pairs)} potential edges.")
 
-log_interval = 100
-count = 0
-total_pairs = len(pairs)
-chunk_start = time.perf_counter()
-
 if pairs:
     pair_array = np.array(list(pairs))
     i, j = pair_array.T
     
     dist = np.linalg.norm(coords_m[i] - coords_m[j], axis=1)
-    weight = min(adf_values[i], adf_values[j]) * np.exp(-dist / sigma_m)
+    weight = np.minimum(adf_values[i], adf_values[j]) * np.exp(-dist / sigma_m)
     
     mask = weight > 0
     edge_list = list(zip(i[mask], j[mask], weight[mask]))
-    
-    if count % log_interval == 0 or count == total_pairs:
-        now = time.perf_counter()
-        elapsed = now - chunk_start
-        speed = log_interval / elapsed if elapsed > 0 else 0
-        percent = (count / total_pairs) * 100
-        print(f"{percent:>6.1f}% | {count:>10} edges | speed: {speed:>6.0f}/s")
-        chunk_start = time.perf_counter()
+
 else:
     edge_list = []
 
@@ -67,24 +56,75 @@ for u, v, w in edge_list:
     infomap_wrapper.add_link(u, v, w)
 infomap_wrapper.run()
 
-communities = [node.module_id for node in infomap_wrapper.nodes]
-unique_comms, counts = np.unique(communities, return_counts=True)
+communities_map = {node.node_id: node.module_id for node in infomap_wrapper.nodes}
+df['community'] = df.index.map(communities_map).fillna(-1)
+
+communities = df['community'].values
+unique_comms, counts = np.unique(communities[communities >= 0], return_counts=True)
     
 valid_communities = sum(1 for count in counts if count >= 4)
 
+community_polygons = {}
+
 for comm_id in unique_comms:
+    print(f"Start processing {comm_id}")
     mask = (np.array(communities) == comm_id)
     X = coords_m[mask]
     weights = adf_values[mask]
 
-    kde = FFTKDE(bw=500).fit(X, weights=weights) # same to the ADF sigma
-    grid, density = kde.evaluate(grid_points=1024)
-    _, point_density = kde.evaluate(X)
+    num_points = len(X)
 
-    rho = 0.9   # Adjustable
-    threshold = np.min(point_density) * rho
+    if num_points >= 4:
+        kde = FFTKDE(bw=500).fit(X, weights=weights) # same to the ADF sigma
+        grid, density = kde.evaluate(grid_points=1024)
+        _, point_density = kde.evaluate(X)
 
-    contours = measure.find_contours(
-        density.reshape(grid[0].shape),
-        level=threshold
-    )
+        rho = 0.9   # Adjustable
+        threshold = np.min(point_density) * rho
+
+        n = int(np.sqrt(len(density)))
+        dens_grid = density.reshape(n, n)
+
+        gx = grid[:, 0].reshape(n, n)
+        gy = grid[:, 1].reshape(n, n)
+
+        contours = measure.find_contours(
+            dens_grid,
+            level=threshold
+        )
+
+        community_polygons[comm_id] = []
+
+        for contour in contours:
+            rows = contour[:, 0].astype(int)
+            cols = contour[:, 1].astype(int)
+            xs = gx[rows, cols]
+            ys = gy[rows, cols]
+            poly = np.column_stack([xs, ys])
+            community_polygons[comm_id].append(poly)
+    else:
+        print(f"Community {comm_id} does not have enough points")
+
+gdf_list = []
+
+for comm_id, polys in community_polygons.items():
+    t_comm = time.perf_counter()
+    for coords in polys:
+        line = LineString(coords)
+        gdf_list.append(
+            gpd.GeoDataFrame(
+                {'community': [comm_id]},
+                geometry=[line],
+                crs="EPSG:32648"
+            )
+        )
+    print(f"Community {comm_id} processed in {time.perf_counter() - t_comm:.4f} seconds")
+
+if len(gdf_list) == 0:
+    print("No contours generated.")
+else:
+    gdf = pd.concat(gdf_list, ignore_index=True)
+    # Convert back to lat/lon for Leaflet
+    gdf = gdf.to_crs(epsg=4326)
+    gdf.to_file("zoi_contour_meters.geojson", driver="GeoJSON")
+    print("Saved KDE contour lines to 'zoi_contour_meters.geojson'")
