@@ -3,7 +3,7 @@ library(leaflet)
 library(scales)
 library(sf)
 
-zoi_sf <- st_read("zoi_polygons_meters_low.geojson")
+zoi_sf <- st_read("adf_polygon.geojson")
 
 zoi_sf <- st_set_crs(zoi_sf, 4326)
 if (st_crs(zoi_sf)$epsg != 4326) zoi_sf <- st_transform(zoi_sf, 4326)
