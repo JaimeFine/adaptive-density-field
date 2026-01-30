@@ -1,26 +1,28 @@
 # Attention in Geometry: Scalable Spatial Modeling via Adaptive Density Fields and FAISS-Accelerated Kernels
 
-> This project is still in progress
+This is a research project~
 
-## Project Goal
-
-Use aircraft trajectory data to detect spatial communities of flight trajectories, analyze patterns, and visualize them on maps.
+> Preprint: https://arxiv.org/pdf/2601.06135
 
 -----
 
 ## Structure
 ```txt
-project/
-  data/                     # Raw and processed data
-    flight_loss.csv
-    poi_back_ground.csv
-    trajectory_adf_zoi.csv
-    chengdu.geo.json
+root/
   case-study/               # Programs and relevant plots in case-study section
-    builder.py
-    plot.R
-    casestudyplot.png
+    adf_processor.py
+    bandwidth.py
+    baseline_processor.py
+    brutal_force.py
+    k_value.py
+    knn_processor.py
+    nprobe.py
+    distance_sensitivity.R
+    distance_sensitivity_plot.R
+    poi_adf_mapper.R
+    pr_curve.R  # Deprecated
   appendix/                 # Programs and relevant plots in the appendix section
+    README.md
     geojson_generator.R
     loss_viewer.R
     poi_sample_viewer.R
@@ -36,9 +38,9 @@ project/
     motion_prediction.ipynb
     base_map_building.ipynb
   graphs/                   # All graphs shown in thesis
+    baseline.pdf
     diagram.pdf
-    plot2.pdf
-  drafts/                   # Deprecated or experimental stuff, or previous version
+    fidelity.pdf
 ```
 
 ---
