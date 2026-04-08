@@ -4,6 +4,20 @@ This is a research project~
 
 > Preprint: https://arxiv.org/pdf/2601.06135
 
+If you find this work useful, please cite:
+
+```bibtex
+@misc{fan2026attentiongeometryscalablespatial,
+      title={Attention in Geometry: Scalable Spatial Modeling via Adaptive Density Fields and FAISS-Accelerated Kernels}, 
+      author={Zhaowen Fan},
+      year={2026},
+      eprint={2601.06135},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2601.06135}, 
+}
+```
+
 -----
 
 ## Structure
