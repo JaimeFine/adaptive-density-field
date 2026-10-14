@@ -69,7 +69,13 @@ for k in k_vals:
             for p in track_ecef
         ])
 
-        percent = 75
+        # D(p) is the MEAN distance to the k nearest reference POIs, so a
+        # SMALLER value means HIGHER local density. Selecting the densest
+        # quartile therefore means keeping the LOWEST 25% of distances (D <= P25).
+        # NOTE: earlier versions used percent=75, which selected the densest 75%
+        # and broke cardinality matching with the ADF and kinematic baselines
+        # (both keep the top 25%). It also contradicted the manuscript text.
+        percent = 25
         threshold = np.percentile(track_knn, percent)
         poi_mask = track_knn <= threshold
 

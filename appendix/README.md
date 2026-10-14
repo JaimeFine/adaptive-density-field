@@ -33,7 +33,7 @@ z &= \left(N(\varphi)(1 - e^2) + h\right)\sin\varphi
 \end{aligned}
 $$
 
-Hence we get the ENU coordinates.
+This gives the ECEF Cartesian coordinates $(x,y,z)$.
 
 ---
 
@@ -55,9 +55,9 @@ And given the Rotation matrix and ENU coordinate at reference $(\varphi_0,\lambd
 
 $$
 \mathbf{R}=\begin{bmatrix}
-\sin\varphi_0 & \cos\varphi_0 & 0 \\
-\cos\varphi_0\cdot\sin\lambda_0 & -\sin\varphi_0\cdot\sin\lambda_0 & \cos\lambda_0 \\
-\cos\varphi_0\cdot\cos\lambda_0 & \sin\varphi_0\cdot\cos\lambda_0 & \sin\lambda_0
+-\sin\lambda_0 & \cos\lambda_0 & 0 \\
+-\sin\varphi_0\cos\lambda_0 & -\sin\varphi_0\sin\lambda_0 & \cos\varphi_0 \\
+\cos\varphi_0\cos\lambda_0 & \cos\varphi_0\sin\lambda_0 & \sin\varphi_0
 \end{bmatrix}
 $$
 
@@ -66,9 +66,9 @@ Therefore we have the calculation:
 $$
 \begin{bmatrix}
 E \\ N \\ U
-\end{bmatrix}=\begin{bmatrix}
+\end{bmatrix}=\mathbf{R}\begin{bmatrix}
 \Delta x \\ \Delta y \\ \Delta z
-\end{bmatrix}\cdot\mathbf{R}
+\end{bmatrix}
 $$
 
 This is the standard ECEF → ENU transformation used in geodesy and navigation.

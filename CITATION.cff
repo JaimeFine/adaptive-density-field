@@ -1,13 +1,14 @@
 cff-version: 1.2.0
 message: "If you use this software or its theoretical formulation, please cite it as below."
-title: "Attention in Geometry: Scalable Spatial Modeling via Adaptive Density Fields and FAISS-Accelerated Kernels"
+title: "Attention in Geometry: An Adaptive Density Field (ADF) with FAISS-Accelerated Spatial Attention"
 authors:
   - family-names: "Fan"
     given-names: "Zhaowen"
 version: "1.0.0"
+license: "GPL-3.0-only"
 date-released: "2025-01-05"
 identifiers:
   - type: "arXiv"
     value: "arXiv:2601.06135"
 doi: "10.48550/arXiv.2601.06135"
-url: "https://github.com/JaimeFine/TrajectoryAnalysis"
+url: "https://github.com/JaimeFine/adaptive-density-field"

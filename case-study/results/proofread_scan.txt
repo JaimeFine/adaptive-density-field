@@ -1,0 +1,10 @@
+Proofread scan: paper.tex
+Lines: 1745
+
+Summary: bare_math_symbols=0, double_spaces=0, doubled_words=0, spelling_candidates=0, terminology_drift=0
+
+No machine-detectable issues found.
+
+
+NOTE: this covers mechanics only. Prose, argument order, and claim
+strength are not checkable by script and still require a human pass.

@@ -1,0 +1,5 @@
+LaTeX artifact scan: paper.tex
+
+Summary: stray_breaks=0, structural_artifacts=0, unbalanced_math=0, unicode_chars=0
+
+No conversion artifacts found.

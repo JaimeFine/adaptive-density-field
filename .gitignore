@@ -1,12 +1,23 @@
-outputs/communities_map.html
+# --- Python ---------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# --- Editors and OS -------------------------------------------------
+.vscode/
 .Rproj.user
-progress.md
-tempfolder/
-.vscode
-drafts/v0-2025-11-30/outputs/track_vectors.txt
-drafts/v0-2025-11-30/outputs/communities_map.html
-drafts/v0-2025-11-30/outputs/w2v.model
-drafts/v0-2025-11-30/deprecated/track_graph.gexf
-drafts/v3-2026-01-30/case-study/data
-case-study/data
+.Rhistory
+.RData
+.DS_Store
+Thumbs.db
+
+# --- Withheld data (third-party terms; see DATA.md) -----------------
+case-study/data/
+
+# --- Development records (see README, Notes) ------------------------
 drafts/
+tempfolder/
+progress.md
